@@ -1,6 +1,3 @@
-# Mirko Mantovani
-
-
 import re
 import string
 
