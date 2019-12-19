@@ -1,22 +1,21 @@
 from preprocess import *
 import math
-#import CustomGUI as gui
 from collections import Counter
 import operator
 import webbrowser
 import pdb
-#from mpi4py import MPI
+from mpi4py import MPI
 
-#comm = MPI.COMM_WORLD
-#size = comm.Get_size()
-#rank = comm.Get_rank()
-#name = MPI.Get_processor_name()
+comm = MPI.COMM_WORLD
+size = comm.Get_size()
+rank = comm.Get_rank()
+name = MPI.Get_processor_name()
 
-rank = 2;
-size = 100;
-data = 20951;
+#rank = 2;
+#size = 100;
+#data = 20951;
 data_shard = math.ceil(float(data)/float(size));
-name = "rox-master"
+#name = "rox-master"
 
 # say size is 100 (processes)
 # say data is 20951
@@ -33,8 +32,8 @@ name = "rox-master"
 RESULTS_PER_PAGE = 10
 
 profiles = {}
-upper = rank*data_shard+rank
-lower = (rank*data_shard+rank)+data_shard
+lower = rank*data_shard
+upper = (rank*data_shard)+data_shard
 print("upper: "+str(upper))
 print("lower: "+str(lower))
 
