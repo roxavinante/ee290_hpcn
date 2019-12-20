@@ -1,21 +1,25 @@
 from preprocess import *
 import math
+#import CustomGUI as gui
 from collections import Counter
 import operator
 import webbrowser
 import pdb
 from mpi4py import MPI
+import time
+import urllib2
+import resource
+import os
+
+start_time = time.time()
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 name = MPI.Get_processor_name()
 
-#rank = 2;
-#size = 100;
-#data = 20951;
+data = 20000000
 data_shard = math.ceil(float(data)/float(size));
-#name = "rox-master"
 
 # say size is 100 (processes)
 # say data is 20951
@@ -33,26 +37,52 @@ RESULTS_PER_PAGE = 10
 
 profiles = {}
 lower = rank*data_shard
-upper = (rank*data_shard)+data_shard
-print("upper: "+str(upper))
-print("lower: "+str(lower))
+upper = (rank*data_shard+rank)+data_shard-(rank+1)
+#print("upper: "+str(upper))
+#print("lower: "+str(lower))
 
-with open('dataset/instagram_bio_dataset', 'r') as f:
+f = urllib2.urlopen("http://10.158.3.121/census_data.txt")
+#f = f.split("\n")
+for line in f:
         line = f.readline()
+        if rank == 0:
+            line = f.readline()
         n_profiles = 0
         while line:
-            if (n_profiles >= upper) and (n_profiles < lower):
+            if (n_profiles >= lower) and (n_profiles < upper):
                 spl = line.split(',')
-                uid = spl[1]
-                bio = ''
-                for b in spl[2:]:
-                    bio += b
-                profiles[uid] = preprocess(bio)
+                uid = spl[0]
+                fname = spl[2]
+                mname = spl[3]
+                lname = spl[4]
+                email = spl[6]
+                dad_name = spl[7]
+                mom_name = spl[8]
+                mom_maiden = spl[9]
+                qtr_join = spl[15]
+                hlf_join = spl[16]
+                yr_join = spl[17]
+                mth_join = spl[19]
+                sht_month = spl[20]
+                dow_join = spl[22]
+                sht_dow_join = spl[23]
+                ssn = spl[27]
+                phone_no = spl[28]
+                place_name = spl[29]
+                county = spl[30]
+                city = spl[31]
+                state = spl[32]
+                zip_code = spl[33]
+                region = spl[34]
+                uname = spl[35]
+                indices = uid +' '+ fname +' '+ mname +' '+ lname +' '+ email +' '+ dad_name +' '+ mom_name +' '+ mom_maiden +' '+ qtr_join +' '+ hlf_join +' '+ yr_join +' '+ mth_join +' '+ sht_month +' '+ dow_join +' '+ sht_dow_join +' '+ ssn +' '+ phone_no +' '+ place_name +' '+ county +' '+ city +' '+ state +' '+ zip_code +' '+ region +' '+ uname
+                #print(indices)
+                profiles[uid] = preprocess(indices)
+                #print(profiles[uid])
             line = f.readline()
             n_profiles += 1
-
-print('read profiles:'+str(n_profiles))
-print(len(profiles))
+#print('read profiles:'+str(n_profiles))
+#print(len(profiles))
 
 inverted_index = {}
 
@@ -60,15 +90,17 @@ for uid in profiles:
     for word in profiles[uid]:
         inverted_index.setdefault(word, {})[uid] = inverted_index.setdefault(word, {}).get(uid, 0) + 1
 
-# print(inverted_index)
+#print(inverted_index)
 
-log = open("log_"+str(rank)+"_"+str(name),"w+")
-log.write("rank: %d\n" % rank)
-log.write("upper: %d\n" % upper)
-log.write("lower: %d\n" % lower)
-log.write("profiles: %d\n" % len(profiles));
-log.write("\n");
-log.close();
+#log = open("log_"+str(rank)+"_"+str(name),"w+")
+#log.write("rank: %d\n" % rank)
+#log.write("upper: %d\n" % upper)
+#log.write("lower: %d\n" % lower)
+#log.write("profiles: %d\n" % len(profiles));
+#log.write("\n");
+#log.close();
+
+print('size=%d, rank=%d, host=%s, lower_data_shard=%d, upper_data_shard=%d, peak_memory_usage=%s, user_mode_time=%s, system_mode_time=%s' % (size, rank, name, lower, upper, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss, resource.getrusage(resource.RUSAGE_SELF).ru_utime, resource.getrusage(resource.RUSAGE_SELF).ru_stime))
 
 # print(inverted_index['model'])
 # document frequency = number of docs containing a specific word, dictionary with key = word, value = num of docs
@@ -80,7 +112,7 @@ for key in inverted_index.keys():
     df[key] = len(inverted_index[key].keys())
     idf[key] = math.log(n_profiles / df[key], 2)
 
-
+#print("--- %s seconds ---" % (time.time() - start_time))
 def tf_idf(w, doc):
     return inverted_index[w][doc] * idf[w]
 
